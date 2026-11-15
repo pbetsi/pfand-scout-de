@@ -4,10 +4,11 @@ import Quiz from './components/Quiz';
 import Dashboard from './components/Dashboard';
 import Datenschutz from './components/Datenschutz';
 import AbfallRatgeber from './components/AbfallRatgeber';
-import Abfallkalender from './components/Abfallkalender'; // <-- NOUVEAU : Calendrier
+import Abfallkalender from './components/Abfallkalender';
+import Admin from './components/Admin'; // <-- NOUVEAU : Interface Admin
 import Logo from './components/Logo';
 import { loadUserData, addPointsAndLog } from './utils/storage';
-import { Shield, BookOpen, Calendar } from 'lucide-react'; // <-- Calendar ajouté
+import { Shield, BookOpen, Calendar, Settings } from 'lucide-react'; // <-- Settings ajouté
 
 function App() {
   const [currentView, setCurrentView] = useState('scanner');
@@ -33,7 +34,7 @@ function App() {
           </h1>
         </div>
         <div className="flex items-center gap-1">
-          {/* Bouton Calendrier (NOUVEAU) */}
+          {/* Bouton Calendrier */}
           <button
             onClick={() => setCurrentView('kalender')}
             className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition"
@@ -61,6 +62,16 @@ function App() {
             aria-label="Datenschutzerklärung öffnen"
           >
             <Shield size={20} />
+          </button>
+
+          {/* Bouton Admin (NOUVEAU) */}
+          <button
+            onClick={() => setCurrentView('admin')}
+            className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition"
+            title="Admin"
+            aria-label="Admin öffnen"
+          >
+            <Settings size={20} />
           </button>
           
           {/* Bouton Dashboard Points */}
@@ -107,7 +118,12 @@ function App() {
           <Abfallkalender
             onBack={() => setCurrentView('scanner')}
           />
-        )} {/* <-- NOUVEAU : Route du calendrier */}
+        )}
+        {currentView === 'admin' && (
+          <Admin
+            onBack={() => setCurrentView('scanner')}
+          />
+        )} {/* <-- NOUVEAU : Route de l'interface Admin */}
       </div>
     </div>
   );

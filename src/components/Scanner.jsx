@@ -306,9 +306,9 @@ export default function Scanner({ onSwitchToQuiz, onAddPoints, onOpenRatgeber, o
                   </p>
                 </div>
 
-                <button className="mt-3 w-full bg-white text-blue-600 py-2 rounded-lg font-medium hover:bg-blue-50 transition">
-                  📍 Nächste Pfand-Automaten finden
-                </button
+               <button className="mt-3 w-full bg-white text-blue-600 py-2 rounded-lg font-medium hover:bg-blue-50 transition">
+  📍 Nächste Pfand-Automaten finden
+</button>   ← ✅ CORRECT
               </div>
             )}
 

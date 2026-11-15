@@ -1,0 +1,98 @@
+{
+  "bundesregeln": {
+    "gelber_sack": {
+      "name": "Gelber Sack / Gelbe Tonne",
+      "icon": "💛",
+      "color": "bg-yellow-400",
+      "borderColor": "border-yellow-500",
+      "textColor": "text-yellow-900",
+      "description": "Leichtverpackungen aus Kunststoff, Metall und Verbundstoffen.",
+      "examples": ["Joghurtbecher (löffelrein)", "Konservendosen", "Milchtüten (Tetra Pak)", "Plastikflaschen (ohne Pfand)"],
+      "forbidden": ["Glas", "Batterien", "Elektrogeräte"]
+    },
+    "papiermuell": {
+      "name": "Papiertonne (Blau)",
+      "icon": "📦",
+      "color": "bg-blue-400",
+      "borderColor": "border-blue-500",
+      "textColor": "text-blue-900",
+      "description": "Papier, Pappe und Kartonagen.",
+      "examples": ["Zeitungen und Zeitschriften", "Kartons (zerkleinert)", "Briefumschläge", "Eierkartons"],
+      "forbidden": ["Verschmutztes Papier (z.B. Pizzakarton mit Fett)", "Backpapier", "Fotos"]
+    },
+    "biomuell": {
+      "name": "Biotonne (Braun/Grün)",
+      "icon": "🌱",
+      "color": "bg-green-600",
+      "borderColor": "border-green-700",
+      "textColor": "text-white",
+      "description": "Organische und kompostierbare Abfälle.",
+      "examples": ["Obst- und Gemüsereste", "Kaffeesatz und Filter", "Eierschalen"],
+      "forbidden": ["Plastiktüten", "Knochen", "Asche"]
+    },
+    "restmuell": {
+      "name": "Restmüll (Grau/Schwarz)",
+      "icon": "🗑️",
+      "color": "bg-gray-600",
+      "borderColor": "border-gray-700",
+      "textColor": "text-white",
+      "description": "Alles, was nicht recycelt werden kann.",
+      "examples": ["Staubsaugerbeutel", "Windeln", "Zigarettenstummel"],
+      "forbidden": ["Sondermüll", "Elektrogeräte", "Wertstoffe"]
+    },
+    "glas": {
+      "name": "Altglas-Container",
+      "icon": "🍾",
+      "color": "bg-green-100",
+      "borderColor": "border-green-600",
+      "textColor": "text-green-900",
+      "description": "Getrennt nach Weiß-, Grün- und Braunglas.",
+      "examples": ["Leere Glasflaschen", "Marmeladengläser (ohne Deckel)"],
+      "forbidden": ["Fensterglas", "Spiegel", "Keramiktassen"]
+    }
+  },
+
+  "kommunalregeln": {
+    "berlin": {
+      "cityName": "Berlin",
+      "overrides": {
+        "gelber_sack": {
+          "name": "Wertstofftonne",
+          "icon": "♻️",
+          "description": "Alle Wertstoffe aus Kunststoff, Metall und Verbundstoffen. Auch Spielzeug, Kochtöpfe und andere Metallgegenstände.",
+          "examples": ["Joghurtbecher", "Konservendosen", "Spielzeug aus Kunststoff", "Kochtöpfe und Pfannen", "Metallbesteck"],
+          "forbidden": ["Glas", "Batterien", "Elektrogeräte mit Kabel"]
+        }
+      },
+      "additionalBins": {
+        "elektroschrott": {
+          "name": "Elektroschrott",
+          "icon": "🔌",
+          "color": "bg-purple-400",
+          "borderColor": "border-purple-500",
+          "textColor": "text-purple-900",
+          "description": "Elektronische Geräte und Batterien.",
+          "examples": ["Handys", "Laptops", "Batterien", "Kabel"],
+          "forbidden": ["Hausmüll", "Verpackungen"]
+        }
+      }
+    },
+    "muenchen": {
+      "cityName": "München",
+      "overrides": {
+        "gelber_sack": {
+          "name": "Gelbe Tonne (Radbehälter)",
+          "icon": "🛢️",
+          "description": "Leichtverpackungen. Keine Gelbe Säcke, nur Gelbe Tonnen als Radbehälter.",
+          "examples": ["Joghurtbecher", "Konservendosen", "Milchtüten"],
+          "forbidden": ["Glas", "Batterien"]
+        }
+      }
+    },
+    "hof": {
+      "cityName": "Hof",
+      "overrides": {},
+      "additionalBins": {}
+    }
+  }
+}

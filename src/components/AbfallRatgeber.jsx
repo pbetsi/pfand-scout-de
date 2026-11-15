@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, MapPin, Info, CheckCircle2, LocateFixed, Search } from 'lucide-react';
+// NOUVEAU : Import des fonctions de règles dynamiques
+import { getCityRules, getCityKeyFromName } from '../utils/cityRules';
 
 // Mapping PLZ → Région (démo réaliste avec des vraies villes pour le pitch B2G)
 const plzMapping = {
@@ -24,7 +26,6 @@ export default function AbfallRatgeber({ onBack }) {
     if (plz.length === 5 && plzMapping[plz]) {
       setLocation({ ...plzMapping[plz], source: 'PLZ-Suche' });
     } else {
-      // Fallback honnête et professionnel
       setLocation({ 
         city: 'Region nicht in Demo-Datenbank', 
         tonne: 'Gelbe Tonne (Standard)', 
@@ -72,63 +73,16 @@ export default function AbfallRatgeber({ onBack }) {
     );
   };
 
-  const wasteTypes = [
-    {
-      id: 'gelber_sack',
-      name: 'Gelber Sack / Gelbe Tonne',
-      color: 'bg-yellow-400',
-      borderColor: 'border-yellow-500',
-      textColor: 'text-yellow-900',
-      icon: '💛',
-      description: 'Leichtverpackungen aus Kunststoff, Metall und Verbundstoffen.',
-      examples: ['Joghurtbecher (löffelrein)', 'Konservendosen', 'Milchtüten (Tetra Pak)', 'Plastikflaschen (ohne Pfand)'],
-      forbidden: ['Glas', 'Batterien', 'Elektrogeräte']
-    },
-    {
-      id: 'papiermuell',
-      name: 'Papiertonne (Blau)',
-      color: 'bg-blue-400',
-      borderColor: 'border-blue-500',
-      textColor: 'text-blue-900',
-      icon: '📦',
-      description: 'Papier, Pappe und Kartonagen.',
-      examples: ['Zeitungen und Zeitschriften', 'Kartons (zerkleinert)', 'Briefumschläge', 'Eierkartons'],
-      forbidden: ['Verschmutztes Papier (z.B. Pizzakarton mit Fett)', 'Backpapier', 'Fotos']
-    },
-    {
-      id: 'biomuell',
-      name: 'Biotonne (Braun)',
-      color: 'bg-amber-700',
-      borderColor: 'border-amber-800',
-      textColor: 'text-amber-50',
-      icon: '🌱',
-      description: 'Organische und kompostierbare Abfälle.',
-      examples: ['Obst- und Gemüsereste', 'Kaffeesatz und Filter', 'Eierschalen', 'Verdorbene Lebensmittel (ohne Verpackung)'],
-      forbidden: ['Plastiktüten (auch "biologisch abbaubare")', 'Knochen', 'Asche']
-    },
-    {
-      id: 'restmuell',
-      name: 'Restmüll (Grau/Schwarz)',
-      color: 'bg-gray-600',
-      borderColor: 'border-gray-700',
-      textColor: 'text-gray-50',
-      icon: '🗑️',
-      description: 'Alles, was nicht recycelt werden kann.',
-      examples: ['Staubsaugerbeutel', 'Windeln', 'Zigarettenstummel', 'Kaugummi'],
-      forbidden: ['Sondermüll', 'Elektrogeräte', 'Wertstoffe']
-    },
-    {
-      id: 'glas',
-      name: 'Altglas-Container',
-      color: 'bg-green-100',
-      borderColor: 'border-green-600',
-      textColor: 'text-green-900',
-      icon: '🍾',
-      description: 'Getrennt nach Weiß-, Grün- und Braunglas.',
-      examples: ['Leere Glasflaschen', 'Marmeladengläser (ohne Deckel)', 'Parfümflakons'],
-      forbidden: ['Fensterglas', 'Spiegel', 'Keramiktassen', 'Trinkgläser']
-    }
-  ];
+  // NOUVEAU : Logique dynamique des règles en fonction de la ville détectée
+  const detectedCity = location?.city || 'Hof';
+  const cityKey = getCityKeyFromName(detectedCity);
+  const { rules: wasteRulesObj, isDefault } = getCityRules(cityKey || 'hof');
+
+  // Convertir l'objet de règles en tableau pour le rendu React (.map)
+  const wasteTypesArray = Object.entries(wasteRulesObj).map(([key, value]) => ({
+    id: key,
+    ...value
+  }));
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
@@ -143,7 +97,7 @@ export default function AbfallRatgeber({ onBack }) {
           </h1>
         </div>
 
-        {/* Sélecteur de localisation intelligent (Argument massue B2G) */}
+        {/* Sélecteur de localisation intelligent */}
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
           <div className="flex items-center gap-2 mb-3 text-gray-700">
             <MapPin size={18} className="text-pfand-green" />
@@ -185,19 +139,19 @@ export default function AbfallRatgeber({ onBack }) {
 
           {/* Résultat affiché */}
           {location && (
-  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
-    <div className="flex items-center justify-between mb-1">
-      <p className="text-sm font-bold text-green-800">📍 {location.city}</p>
-      <span className="text-[10px] bg-green-200 text-green-800 px-2 py-0.5 rounded-full font-medium">
-        {location.source}
-      </span>
-    </div>
-    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-green-700">
-      <span>🟡 <strong>{location.tonne}</strong></span>
-      <span>🟤 <strong>{location.bio}</strong></span>
-    </div>
-  </div>
-)}
+            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-sm font-bold text-green-800">📍 {location.city}</p>
+                <span className="text-[10px] bg-green-200 text-green-800 px-2 py-0.5 rounded-full font-medium">
+                  {location.source}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-green-700">
+                <span>🟡 <strong>{location.tonne}</strong></span>
+                <span>🟤 <strong>{location.bio}</strong></span>
+              </div>
+            </div>
+          )}
 
           <p className="text-xs text-gray-500 mt-3 flex items-start gap-1">
             <Info size={12} className="mt-0.5 flex-shrink-0" />
@@ -207,9 +161,18 @@ export default function AbfallRatgeber({ onBack }) {
           </p>
         </div>
 
-        {/* Liste des poubelles */}
+        {/* NOUVEAU : Message d'information si des règles spécifiques à la ville sont appliquées */}
+        {!isDefault && location && (
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-lg mb-4">
+            <p className="text-sm text-blue-800">
+              ℹ️ Sie sehen die spezifischen Regeln für <strong>{location.city}</strong>.
+            </p>
+          </div>
+        )}
+
+        {/* Liste des poubelles (dynamique) */}
         <div className="space-y-4">
-          {wasteTypes.map((waste) => (
+          {wasteTypesArray.map((waste) => (
             <div 
               key={waste.id} 
               className={`bg-white rounded-lg shadow-sm border-l-4 ${waste.borderColor} overflow-hidden`}
