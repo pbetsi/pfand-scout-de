@@ -8,6 +8,7 @@ import {
 import Logo from './Logo';
 import productsData from '../data/products.json';
 import { findProductByEAN, disposalRules } from '../utils/pfandRules';
+import { loadMunicipalRules, getCityByPLZ } from '../utils/municipalRules'; // <-- NOUVEAU : Import des règles municipales
 
 export default function Scanner({ onSwitchToQuiz, onAddPoints, onOpenRatgeber, onOpenDatenschutz }) {
   const [isScanning, setIsScanning] = useState(false);
@@ -18,6 +19,15 @@ export default function Scanner({ onSwitchToQuiz, onAddPoints, onOpenRatgeber, o
   const [isLoading, setIsLoading] = useState(false);
   const html5QrCodeRef = useRef(null);
   const isProcessingRef = useRef(false);
+
+  // --- FONCTION MAGIQUE : Lire les noms de poubelles de l'admin en temps réel ---
+  const getCustomBinName = (defaultKey) => {
+    const rules = loadMunicipalRules();
+    // Pour la démo, on prend la première ville configurée. 
+    // En production, on utiliserait getCityByPLZ(userPLZ) pour cibler la ville exacte.
+    const activeCity = rules.cities[0]; 
+    return activeCity?.rules?.[defaultKey] || disposalRules[defaultKey]?.bin || defaultKey;
+  };
 
   // --- FONCTIONS DE MAPPING ---
   const mapMaterialToDisposal = (material) => {
@@ -46,7 +56,7 @@ export default function Scanner({ onSwitchToQuiz, onAddPoints, onOpenRatgeber, o
   };
 
   const detectDisposalByName = (nameLower, categories) => {
-    // Boîtes de conserve, canettes (RÉPOND AU PROBLÈME DES HARICOTS/BOHNEN)
+    // Boîtes de conserve, canettes
     if (nameLower.includes('dose') || nameLower.includes('konserv') || nameLower.includes('can') || 
         nameLower.includes('bohnen') || nameLower.includes('mais') || nameLower.includes('erbse') ||
         nameLower.includes('suppe') || nameLower.includes('gemüse')) {
@@ -306,16 +316,17 @@ export default function Scanner({ onSwitchToQuiz, onAddPoints, onOpenRatgeber, o
                   </p>
                 </div>
 
-               <button className="mt-3 w-full bg-white text-blue-600 py-2 rounded-lg font-medium hover:bg-blue-50 transition">
-  📍 Nächste Pfand-Automaten finden
-</button>   ← ✅ CORRECT
+                <button className="mt-3 w-full bg-white text-blue-600 py-2 rounded-lg font-medium hover:bg-blue-50 transition">
+                  📍 Nächste Pfand-Automaten finden
+                </button>
               </div>
             )}
 
+            {/* ICI LA MAGIE : On affiche le nom personnalisé de l'admin, pas le nom en dur */}
             <div className={`p-4 border-l-4 rounded ${disposalRules[product.disposal].color}`}>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-2xl">{disposalRules[product.disposal].icon}</span>
-                <span className="font-bold text-gray-800">{disposalRules[product.disposal].bin}</span>
+                <span className="font-bold text-gray-800">{getCustomBinName(product.disposal)}</span>
               </div>
               <p className="text-sm text-gray-700">{disposalRules[product.disposal].description}</p>
             </div>

@@ -1,13 +1,14 @@
-import { useState, useEffect } from 'react';
-import { 
-  ArrowLeft, Plus, Edit, Trash2, Download, Upload, 
-  Save, X, Calendar, MapPin, Settings, LogOut,
-  CheckCircle, AlertCircle
+import { useState, useRef } from 'react';
+import {
+  ArrowLeft, Plus, Edit, Trash2, Download, Upload, Save, X,
+  MapPin, Settings, LogOut, CheckCircle, AlertCircle, CalendarDays, FileText, Key
 } from 'lucide-react';
 import {
   loadMunicipalRules, addCity, updateCity, deleteCity,
-  exportRulesToJSON, importRulesFromJSON
+  exportRulesToJSON, importRulesFromJSON, parseICS, parseCSV, exportCityToICS,
+  getAdminPassword, setAdminPassword // <-- NOUVEAU : Gestion du mot de passe
 } from '../utils/municipalRules';
+import CalendarEditor from './CalendarEditor';
 
 export default function Admin({ onBack }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -15,16 +16,18 @@ export default function Admin({ onBack }) {
   const [error, setError] = useState('');
   const [rules, setRules] = useState(loadMunicipalRules());
   const [editingCity, setEditingCity] = useState(null);
-  const [showImport, setShowImport] = useState(false);
-  const [importText, setImportText] = useState('');
+  const [editingCalendar, setEditingCalendar] = useState(null);
   const [message, setMessage] = useState(null);
+  const fileInputRef = useRef(null);
 
-  // Mot de passe admin (en production, utiliser un vrai système d'auth)
-  const ADMIN_PASSWORD = 'admin2026';
+  // Gestion du changement de mot de passe
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (password === ADMIN_PASSWORD) {
+    // Utilisation de la fonction dynamique au lieu de la constante en dur
+    if (password === getAdminPassword()) {
       setIsAuthenticated(true);
       setError('');
     } else {
@@ -32,121 +35,152 @@ export default function Admin({ onBack }) {
     }
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setPassword('');
-    setEditingCity(null);
+  const showMessage = (text, type) => {
+    setMessage({ text, type });
+    setTimeout(() => setMessage(null), 4000);
+  };
+
+  const handleChangePassword = (e) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      showMessage('Passwörter stimmen nicht überein', 'error');
+      return;
+    }
+    if (newPassword.length < 4) {
+      showMessage('Passwort muss mindestens 4 Zeichen haben', 'error');
+      return;
+    }
+    setAdminPassword(newPassword);
+    setNewPassword('');
+    setConfirmPassword('');
+    showMessage('Passwort erfolgreich geändert!', 'success');
   };
 
   const handleAddCity = () => {
     const newCity = {
-      id: `city_${Date.now()}`,
-      name: 'Neue Stadt',
-      plz: '00000',
-      rules: {
-        gelber_sack: 'Gelber Sack',
-        papiermuell: 'Papiertonne',
-        biomuell: 'Biotonne',
-        restmuell: 'Restmüll',
-        glas: 'Altglas-Container'
-      },
+      id: `city_${Date.now()}`, name: 'Neue Stadt', plz: '00000', logo: null,
+      rules: { gelber_sack: 'Gelber Sack', papiermuell: 'Papiertonne', biomuell: 'Biotonne', restmuell: 'Restmüll', glas: 'Altglas-Container' },
       collectionDays: {}
     };
-    const updatedRules = addCity(newCity);
-    setRules(updatedRules);
+    setRules(addCity(newCity));
     setEditingCity(newCity.id);
   };
 
   const handleUpdateCity = (cityId, updatedCity) => {
-    const updatedRules = updateCity(cityId, updatedCity);
-    setRules(updatedRules);
+    setRules(updateCity(cityId, updatedCity));
     setEditingCity(null);
     showMessage('Stadt erfolgreich aktualisiert', 'success');
   };
 
   const handleDeleteCity = (cityId) => {
     if (window.confirm('Möchten Sie diese Stadt wirklich löschen?')) {
-      const updatedRules = deleteCity(cityId);
-      setRules(updatedRules);
+      setRules(deleteCity(cityId));
       setEditingCity(null);
       showMessage('Stadt gelöscht', 'success');
     }
   };
 
-  const handleExport = () => {
-    exportRulesToJSON();
-    showMessage('Regeln exportiert', 'success');
+  const handleSaveCalendar = (updatedCity) => {
+    setRules(updateCity(updatedCity.id, updatedCity));
+    setEditingCalendar(null);
+    showMessage('Kalender gespeichert', 'success');
   };
 
-  const handleImport = () => {
-    const result = importRulesFromJSON(importText);
-    if (result.success) {
-      setRules(loadMunicipalRules());
-      setShowImport(false);
-      setImportText('');
-      showMessage(result.message, 'success');
-    } else {
-      showMessage(result.message, 'error');
-    }
-  };
-
-  const showMessage = (text, type) => {
-    setMessage({ text, type });
-    setTimeout(() => setMessage(null), 3000);
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result;
+      const name = file.name.toLowerCase();
+      
+      if (name.endsWith('.json')) {
+        const res = importRulesFromJSON(text);
+        if (res.success) {
+          setRules(loadMunicipalRules());
+          showMessage(res.message, 'success');
+        } else {
+          showMessage(res.message, 'error');
+        }
+      } else if (name.endsWith('.ics')) {
+        const days = parseICS(text);
+        const count = Object.values(days).reduce((a, m) => a + Object.keys(m).length, 0);
+        if (count === 0) {
+          showMessage('Keine Termine in ICS gefunden', 'error');
+          return;
+        }
+        const target = editingCity ? rules.cities.find(c => c.id === editingCity) : rules.cities[0];
+        if (target) {
+          const updated = { ...target, collectionDays: { ...target.collectionDays, ...days } };
+          setRules(updateCity(target.id, updated));
+          showMessage(`${count} Abholtermine aus ICS importiert`, 'success');
+        }
+      } else if (name.endsWith('.csv')) {
+        const days = parseCSV(text);
+        const count = Object.values(days).reduce((a, m) => a + Object.keys(m).length, 0);
+        if (count === 0) {
+          showMessage('Keine Termine in CSV gefunden', 'error');
+          return;
+        }
+        const target = editingCity ? rules.cities.find(c => c.id === editingCity) : rules.cities[0];
+        if (target) {
+          const updated = { ...target, collectionDays: { ...target.collectionDays, ...days } };
+          setRules(updateCity(target.id, updated));
+          showMessage(`${count} Abholtermine aus CSV importiert`, 'success');
+        }
+      } else {
+        showMessage('Nur .ics, .csv oder .json erlaubt', 'error');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
   };
 
   // Écran de login
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gray-50 p-4 flex items-center justify-center">
-        <div className="max-w-md w-full">
-          <div className="bg-white p-8 rounded-lg shadow-lg">
-            <div className="text-center mb-6">
-              <Settings className="mx-auto text-pfand-green mb-2" size={48} />
-              <h1 className="text-2xl font-bold text-gray-800">Admin Login</h1>
-              <p className="text-sm text-gray-500 mt-1">Pfand-Scout DE Verwaltung</p>
+        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-lg">
+          <div className="text-center mb-6">
+            <Settings className="mx-auto text-pfand-green mb-2" size={48} />
+            <h1 className="text-2xl font-bold text-gray-800">Admin Login</h1>
+            <p className="text-sm text-gray-500 mt-1">Pfand-Scout DE Verwaltung</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Passwort</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pfand-green focus:border-transparent"
+                placeholder="Admin-Passwort eingeben"
+                required
+              />
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Passwort
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-pfand-green focus:border-transparent"
-                  placeholder="Admin-Passwort eingeben"
-                  required
-                />
+            {error && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                <p className="text-sm text-red-700">{error}</p>
               </div>
-
-              {error && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="w-full bg-pfand-green text-white py-3 rounded-lg font-medium hover:bg-green-700 transition"
-              >
-                Anmelden
-              </button>
-            </form>
+            )}
 
             <button
-              onClick={onBack}
-              className="mt-4 w-full text-gray-500 hover:text-gray-700 text-sm"
+              type="submit"
+              className="w-full bg-pfand-green text-white py-3 rounded-lg font-medium hover:bg-green-700 transition"
             >
-              ← Zurück zur App
+              Anmelden
             </button>
+          </form>
 
-            <div className="mt-6 p-3 bg-blue-50 rounded-lg text-xs text-blue-700">
-              <strong>Hinweis:</strong> Dies ist eine Demo. Passwort: admin2026
-            </div>
-          </div>
+          <button
+            onClick={onBack}
+            className="mt-4 w-full text-gray-500 hover:text-gray-700 text-sm"
+          >
+            ← Zurück zur App
+          </button>
         </div>
       </div>
     );
@@ -164,11 +198,11 @@ export default function Admin({ onBack }) {
             </button>
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
-              <p className="text-sm text-gray-500">Verwaltung der kommunalen Regeln</p>
+              <p className="text-sm text-gray-500">Kommunale Regeln & Kalender</p>
             </div>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={() => setIsAuthenticated(false)}
             className="text-gray-500 hover:text-red-500 p-2"
             title="Abmelden"
           >
@@ -211,32 +245,36 @@ export default function Admin({ onBack }) {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 mb-6">
+        <div className="flex flex-wrap gap-3 mb-6">
           <button
             onClick={handleAddCity}
-            className="flex-1 bg-pfand-green text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition"
+            className="flex-1 min-w-[200px] bg-pfand-green text-white py-3 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition"
           >
-            <Plus size={20} />
-            Neue Stadt hinzufügen
+            <Plus size={20} /> Neue Stadt
           </button>
           <button
-            onClick={handleExport}
-            className="bg-blue-500 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-600 transition"
-          >
-            <Download size={20} />
-            Export
-          </button>
-          <button
-            onClick={() => setShowImport(true)}
+            onClick={() => fileInputRef.current?.click()}
             className="bg-purple-500 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-purple-600 transition"
           >
-            <Upload size={20} />
-            Import
+            <Upload size={20} /> Import (.ics/.csv/.json)
+          </button>
+          <input 
+            ref={fileInputRef} 
+            type="file" 
+            accept=".ics,.csv,.json" 
+            className="hidden" 
+            onChange={handleFileUpload} 
+          />
+          <button
+            onClick={exportRulesToJSON}
+            className="bg-blue-500 text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-blue-600 transition"
+          >
+            <Download size={20} /> Export
           </button>
         </div>
 
         {/* Liste des villes */}
-        <div className="space-y-4">
+        <div className="space-y-4 mb-8">
           {rules.cities.map(city => (
             <div key={city.id} className="bg-white rounded-lg shadow-sm overflow-hidden">
               {editingCity === city.id ? (
@@ -248,7 +286,7 @@ export default function Admin({ onBack }) {
                 />
               ) : (
                 <div className="p-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-3">
                       <MapPin className="text-pfand-green" size={24} />
                       <div>
@@ -258,9 +296,23 @@ export default function Admin({ onBack }) {
                     </div>
                     <div className="flex gap-2">
                       <button
+                        onClick={() => setEditingCalendar(city)}
+                        className="text-orange-500 hover:text-orange-700 p-2"
+                        title="Kalender visuell bearbeiten"
+                      >
+                        <CalendarDays size={18} />
+                      </button>
+                      <button
+                        onClick={() => exportCityToICS(city)}
+                        className="text-green-600 hover:text-green-800 p-2"
+                        title="ICS Exportieren"
+                      >
+                        <FileText size={18} />
+                      </button>
+                      <button
                         onClick={() => setEditingCity(city.id)}
                         className="text-blue-500 hover:text-blue-700 p-2"
-                        title="Bearbeiten"
+                        title="Regeln bearbeiten"
                       >
                         <Edit size={18} />
                       </button>
@@ -286,48 +338,53 @@ export default function Admin({ onBack }) {
           ))}
         </div>
 
-        {/* Modal Import */}
-        {showImport && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-800">Regeln importieren</h2>
-                <button onClick={() => setShowImport(false)} className="text-gray-500 hover:text-gray-700">
-                  <X size={24} />
-                </button>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Fügen Sie den JSON-Code der Regeln hier ein:
-              </p>
-              <textarea
-                value={importText}
-                onChange={(e) => setImportText(e.target.value)}
-                className="w-full h-64 p-3 border border-gray-300 rounded-lg font-mono text-sm"
-                placeholder='{"cities": [...]}'
-              />
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={handleImport}
-                  className="flex-1 bg-pfand-green text-white py-2 rounded-lg hover:bg-green-700 transition"
-                >
-                  Importieren
-                </button>
-                <button
-                  onClick={() => setShowImport(false)}
-                  className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 transition"
-                >
-                  Abbrechen
-                </button>
-              </div>
-            </div>
+        {/* NOUVEAU : Section Sécurité (Changement de mot de passe) */}
+        <div className="bg-white rounded-lg shadow-sm p-6 border-t-4 border-yellow-400">
+          <div className="flex items-center gap-2 mb-4">
+            <Key className="text-yellow-600" size={24} />
+            <h2 className="text-xl font-bold text-gray-800">Sicherheit & Passwort</h2>
           </div>
+          <form onSubmit={handleChangePassword} className="max-w-md space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Neues Passwort</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Passwort bestätigen</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded"
+                required
+              />
+            </div>
+            <button type="submit" className="bg-yellow-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-yellow-600 transition">
+              <Save size={18} /> Passwort ändern
+            </button>
+          </form>
+        </div>
+
+        {/* Éditeur de calendrier visuel (Modal) */}
+        {editingCalendar && (
+          <CalendarEditor
+            city={editingCalendar}
+            onSave={handleSaveCalendar}
+            onCancel={() => setEditingCalendar(null)}
+          />
         )}
       </div>
     </div>
   );
 }
 
-// Composant d'édition d'une ville
+// Composant d'édition d'une ville (Règles textuelles)
 function CityEditor({ city, onSave, onCancel, onDelete }) {
   const [formData, setFormData] = useState({ ...city });
 
@@ -369,7 +426,7 @@ function CityEditor({ city, onSave, onCancel, onDelete }) {
       </div>
 
       <div>
-        <h4 className="font-medium text-gray-800 mb-2">Müllregeln</h4>
+        <h4 className="font-medium text-gray-800 mb-2">Müllregeln (Namen anpassen)</h4>
         <div className="space-y-2">
           {Object.entries(formData.rules).map(([key, value]) => (
             <div key={key} className="flex gap-2">
@@ -392,8 +449,7 @@ function CityEditor({ city, onSave, onCancel, onDelete }) {
           type="submit"
           className="flex-1 bg-pfand-green text-white py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-green-700 transition"
         >
-          <Save size={18} />
-          Speichern
+          <Save size={18} /> Speichern
         </button>
         <button
           type="button"
