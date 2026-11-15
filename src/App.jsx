@@ -4,9 +4,10 @@ import Quiz from './components/Quiz';
 import Dashboard from './components/Dashboard';
 import Datenschutz from './components/Datenschutz';
 import AbfallRatgeber from './components/AbfallRatgeber';
+import Abfallkalender from './components/Abfallkalender'; // <-- NOUVEAU : Calendrier
 import Logo from './components/Logo';
 import { loadUserData, addPointsAndLog } from './utils/storage';
-import { Shield, BookOpen } from 'lucide-react';
+import { Shield, BookOpen, Calendar } from 'lucide-react'; // <-- Calendar ajouté
 
 function App() {
   const [currentView, setCurrentView] = useState('scanner');
@@ -32,6 +33,17 @@ function App() {
           </h1>
         </div>
         <div className="flex items-center gap-1">
+          {/* Bouton Calendrier (NOUVEAU) */}
+          <button
+            onClick={() => setCurrentView('kalender')}
+            className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition"
+            title="Abfallkalender"
+            aria-label="Abfallkalender öffnen"
+          >
+            <Calendar size={20} />
+          </button>
+          
+          {/* Bouton Ratgeber */}
           <button
             onClick={() => setCurrentView('ratgeber')}
             className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition"
@@ -40,6 +52,8 @@ function App() {
           >
             <BookOpen size={20} />
           </button>
+          
+          {/* Bouton Datenschutz */}
           <button
             onClick={() => setCurrentView('datenschutz')}
             className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition"
@@ -48,6 +62,8 @@ function App() {
           >
             <Shield size={20} />
           </button>
+          
+          {/* Bouton Dashboard Points */}
           <button
             onClick={() => setCurrentView('dashboard')}
             className="ml-2 text-sm bg-pfand-green text-white px-3 py-1.5 rounded-full hover:bg-green-700 transition font-medium shadow-sm"
@@ -87,6 +103,11 @@ function App() {
             onBack={() => setCurrentView('scanner')}
           />
         )}
+        {currentView === 'kalender' && (
+          <Abfallkalender
+            onBack={() => setCurrentView('scanner')}
+          />
+        )} {/* <-- NOUVEAU : Route du calendrier */}
       </div>
     </div>
   );
