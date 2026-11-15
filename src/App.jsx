@@ -22,7 +22,7 @@ function App() {
 
   return (
     <div>
-      {/* Barre de navigation CITOYENNE (fond blanc, PAS d'icône admin) */}
+      {/* Barre de navigation CITOYENNE - PAS d'accès admin */}
       <div className="fixed top-0 left-0 right-0 bg-white shadow-sm py-2 px-4 flex justify-between items-center z-50 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <Logo size={28} municipalLogo={MUNICIPAL_LOGO} />
