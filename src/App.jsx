@@ -5,18 +5,15 @@ import Dashboard from './components/Dashboard';
 import Datenschutz from './components/Datenschutz';
 import AbfallRatgeber from './components/AbfallRatgeber';
 import Abfallkalender from './components/Abfallkalender';
-import Admin from './components/Admin'; // <-- NOUVEAU : Interface Admin
 import Logo from './components/Logo';
 import { loadUserData, addPointsAndLog } from './utils/storage';
-import { Shield, BookOpen, Calendar, Settings } from 'lucide-react'; // <-- Settings ajouté
+import { Shield, BookOpen, Calendar } from 'lucide-react';
 
 function App() {
   const [currentView, setCurrentView] = useState('scanner');
   const [userData, setUserData] = useState(loadUserData());
 
-  // ⚙️ WHITE-LABEL : pour une commune, remplace par son logo
-  // Ex: const MUNICIPAL_LOGO = 'https://www.hof.de/logo.png';
-  const MUNICIPAL_LOGO = null; // null = logo Pfand-Scout par défaut
+  const MUNICIPAL_LOGO = null;
 
   const handleAddPoints = (points, action, product = null) => {
     const newData = addPointsAndLog(points, action, product);
@@ -25,7 +22,7 @@ function App() {
 
   return (
     <div>
-      {/* Barre de navigation professionnelle */}
+      {/* Barre de navigation CITOYENNE (fond blanc, PAS d'icône admin) */}
       <div className="fixed top-0 left-0 right-0 bg-white shadow-sm py-2 px-4 flex justify-between items-center z-50 border-b border-gray-100">
         <div className="flex items-center gap-2">
           <Logo size={28} municipalLogo={MUNICIPAL_LOGO} />
@@ -34,51 +31,16 @@ function App() {
           </h1>
         </div>
         <div className="flex items-center gap-1">
-          {/* Bouton Calendrier */}
-          <button
-            onClick={() => setCurrentView('kalender')}
-            className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition"
-            title="Abfallkalender"
-            aria-label="Abfallkalender öffnen"
-          >
+          <button onClick={() => setCurrentView('kalender')} className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition" title="Abfallkalender" aria-label="Abfallkalender öffnen">
             <Calendar size={20} />
           </button>
-          
-          {/* Bouton Ratgeber */}
-          <button
-            onClick={() => setCurrentView('ratgeber')}
-            className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition"
-            title="Abfall-Ratgeber"
-            aria-label="Abfall-Ratgeber öffnen"
-          >
+          <button onClick={() => setCurrentView('ratgeber')} className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition" title="Abfall-Ratgeber" aria-label="Abfall-Ratgeber öffnen">
             <BookOpen size={20} />
           </button>
-          
-          {/* Bouton Datenschutz */}
-          <button
-            onClick={() => setCurrentView('datenschutz')}
-            className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition"
-            title="Datenschutz"
-            aria-label="Datenschutzerklärung öffnen"
-          >
+          <button onClick={() => setCurrentView('datenschutz')} className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition" title="Datenschutz" aria-label="Datenschutzerklärung öffnen">
             <Shield size={20} />
           </button>
-
-          {/* Bouton Admin (NOUVEAU) */}
-          <button
-            onClick={() => setCurrentView('admin')}
-            className="text-gray-500 hover:text-pfand-green p-2 rounded-full hover:bg-gray-100 transition"
-            title="Admin"
-            aria-label="Admin öffnen"
-          >
-            <Settings size={20} />
-          </button>
-          
-          {/* Bouton Dashboard Points */}
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className="ml-2 text-sm bg-pfand-green text-white px-3 py-1.5 rounded-full hover:bg-green-700 transition font-medium shadow-sm"
-          >
+          <button onClick={() => setCurrentView('dashboard')} className="ml-2 text-sm bg-pfand-green text-white px-3 py-1.5 rounded-full hover:bg-green-700 transition font-medium shadow-sm">
             🌱 {userData.totalPoints}
           </button>
         </div>
@@ -86,44 +48,13 @@ function App() {
 
       <div className="pt-16">
         {currentView === 'scanner' && (
-          <Scanner
-            onSwitchToQuiz={() => setCurrentView('quiz')}
-            onAddPoints={handleAddPoints}
-            onOpenRatgeber={() => setCurrentView('ratgeber')}
-            onOpenDatenschutz={() => setCurrentView('datenschutz')}
-          />
+          <Scanner onSwitchToQuiz={() => setCurrentView('quiz')} onAddPoints={handleAddPoints} onOpenRatgeber={() => setCurrentView('ratgeber')} onOpenDatenschutz={() => setCurrentView('datenschutz')} />
         )}
-        {currentView === 'quiz' && (
-          <Quiz
-            onBack={() => setCurrentView('scanner')}
-            onAddPoints={handleAddPoints}
-          />
-        )}
-        {currentView === 'dashboard' && (
-          <Dashboard
-            onBack={() => setCurrentView('scanner')}
-          />
-        )}
-        {currentView === 'datenschutz' && (
-          <Datenschutz
-            onBack={() => setCurrentView('scanner')}
-          />
-        )}
-        {currentView === 'ratgeber' && (
-          <AbfallRatgeber
-            onBack={() => setCurrentView('scanner')}
-          />
-        )}
-        {currentView === 'kalender' && (
-          <Abfallkalender
-            onBack={() => setCurrentView('scanner')}
-          />
-        )}
-        {currentView === 'admin' && (
-          <Admin
-            onBack={() => setCurrentView('scanner')}
-          />
-        )} {/* <-- NOUVEAU : Route de l'interface Admin */}
+        {currentView === 'quiz' && <Quiz onBack={() => setCurrentView('scanner')} onAddPoints={handleAddPoints} />}
+        {currentView === 'dashboard' && <Dashboard onBack={() => setCurrentView('scanner')} />}
+        {currentView === 'datenschutz' && <Datenschutz onBack={() => setCurrentView('scanner')} />}
+        {currentView === 'ratgeber' && <AbfallRatgeber onBack={() => setCurrentView('scanner')} />}
+        {currentView === 'kalender' && <Abfallkalender onBack={() => setCurrentView('scanner')} />}
       </div>
     </div>
   );
